@@ -5,10 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vite-friendly module import for the Route Captain web component -->
+    <script type="module" src="/route-cap-app/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@latest/dist/driver.js.iife.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@latest/dist/driver.css"/>
     <title>sample-proj</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Optional: you can include this element, or the component auto-initializes when the script loads -->
+    <route-captain-chat></route-captain-chat>
   </body>
 </html>
