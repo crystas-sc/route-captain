@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, ShoppingCart, Package, Filter, Trash2, CreditCard, ArrowRight, ArrowLeft, Search, User, ChevronDown, Star,
   Truck, ChevronUp, Heart, Bookmark // Added Heart and Bookmark icons
@@ -133,9 +134,10 @@ const FormSelect = ({ id, label, value, onChange, children, required = false }) 
 
 // --- HEADER & NAVIGATION ---
 
-const Header = ({ setPage, cartCount }) => {
+const Header = ({ cartCount }) => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
+  const navigate = useNavigate();
 
   // Close menu on outside click
   useEffect(() => {
@@ -150,6 +152,11 @@ const Header = ({ setPage, cartCount }) => {
     };
   }, []);
 
+  const handleNavigation = (path) => {
+    navigate(path);
+    setIsAccountMenuOpen(false);
+  };
+
   return (
     <header className="bg-gray-800 text-white shadow-lg sticky top-0 z-50">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -157,7 +164,7 @@ const Header = ({ setPage, cartCount }) => {
           
           {/* Logo */}
           <div className="flex-shrink-0">
-            <button onClick={() => setPage('home')} className="flex items-center space-x-2">
+            <button onClick={() => handleNavigation('/')} className="flex items-center space-x-2">
               <Package className="h-8 w-8 text-blue-400" />
               <span className="text-2xl font-bold">E-Clone</span>
             </button>
@@ -179,15 +186,15 @@ const Header = ({ setPage, cartCount }) => {
 
           {/* Nav Links */}
           <div className="flex items-center space-x-4">
-            <button onClick={() => setPage('home')} className="flex items-center space-x-1 hover:text-blue-300 transition duration-150">
+            <button onClick={() => handleNavigation('/')} className="flex items-center space-x-1 hover:text-blue-300 transition duration-150">
               <Home className="h-5 w-5" />
               <span className="hidden lg:inline">Home</span>
             </button>
-            <button onClick={() => setPage('orders')} className="flex items-center space-x-1 hover:text-blue-300 transition duration-150">
+            <button onClick={() => handleNavigation('/orders')} className="flex items-center space-x-1 hover:text-blue-300 transition duration-150">
               <Package className="h-5 w-5" />
               <span className="hidden lg:inline">My Orders</span>
             </button>
-            <button onClick={() => setPage('cart')} className="relative flex items-center space-x-1 hover:text-blue-300 transition duration-150">
+            <button onClick={() => handleNavigation('/cart')} className="relative flex items-center space-x-1 hover:text-blue-300 transition duration-150">
               <ShoppingCart className="h-5 w-5" />
               <span className="hidden lg:inline">Cart</span>
               {cartCount > 0 && (
@@ -217,7 +224,7 @@ const Header = ({ setPage, cartCount }) => {
                       <li className="flex items-center">
                         <Bookmark className="h-4 w-4 mr-2 text-gray-500" />
                         <button
-                          onClick={() => { setPage('wishlist'); setIsAccountMenuOpen(false); }}
+                          onClick={() => handleNavigation('/wishlist')}
                           className="hover:text-blue-600 hover:underline"
                         >
                           Your Wish List
@@ -232,7 +239,7 @@ const Header = ({ setPage, cartCount }) => {
                     <ul className="space-y-1 text-sm">
                       <li>
                         <button
-                          onClick={() => { setPage('orders'); setIsAccountMenuOpen(false); }}
+                          onClick={() => handleNavigation('/orders')}
                           className="hover:text-blue-600 hover:underline"
                         >
                           Your Orders
@@ -251,6 +258,7 @@ const Header = ({ setPage, cartCount }) => {
     </header>
   );
 };
+
 
 // --- HOME/PRODUCTS PAGE ---
 
@@ -385,7 +393,7 @@ const FilterSidebar = ({
   );
 };
 
-const ProductCard = ({ product, onAddToCart, setPage, setSelectedProduct, onToggleWishlist, wishlist }) => {
+const ProductCard = ({ product, onAddToCart, navigate, setSelectedProduct, onToggleWishlist, wishlist }) => {
   const isInWishlist = useMemo(() => 
     wishlist.some(item => item.id === product.id),
     [wishlist, product.id]
@@ -406,7 +414,7 @@ const ProductCard = ({ product, onAddToCart, setPage, setSelectedProduct, onTogg
 
       <div className="h-48 w-full overflow-hidden cursor-pointer" onClick={() => {
           setSelectedProduct(product);
-          setPage('productDetail');
+          navigate('/productDetail');
         }}>
         <img 
           src={product.imageUrl} 
@@ -419,7 +427,7 @@ const ProductCard = ({ product, onAddToCart, setPage, setSelectedProduct, onTogg
         <button
           onClick={() => {
             setSelectedProduct(product);
-            setPage('productDetail');
+            navigate('/productDetail');
           }}
           className="text-lg font-semibold text-gray-800 mb-1 truncate text-left hover:text-blue-600 focus:outline-none"
         >
@@ -447,7 +455,7 @@ const ProductCard = ({ product, onAddToCart, setPage, setSelectedProduct, onTogg
   );
 };
 
-const HomePage = ({ onAddToCart, setPage, setSelectedProduct, wishlist, onToggleWishlist }) => {
+const HomePage = ({ onAddToCart, navigate, setSelectedProduct, wishlist, onToggleWishlist }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSubCategory, setSelectedSubCategory] = useState('All');
   const [selectedBrand, setSelectedBrand] = useState('All');
@@ -525,7 +533,7 @@ const HomePage = ({ onAddToCart, setPage, setSelectedProduct, wishlist, onToggle
                   key={product.id}
                   product={product}
                   onAddToCart={onAddToCart}
-                  setPage={setPage}
+                  navigate={navigate}
                   setSelectedProduct={setSelectedProduct}
                   onToggleWishlist={onToggleWishlist}
                   wishlist={wishlist}
@@ -543,7 +551,7 @@ const HomePage = ({ onAddToCart, setPage, setSelectedProduct, wishlist, onToggle
 
 // --- PRODUCT DETAIL PAGE ---
 
-const ProductDetailPage = ({ product, setPage, onAddToCart, wishlist, onToggleWishlist }) => {
+const ProductDetailPage = ({ product, navigate, onAddToCart, wishlist, onToggleWishlist }) => {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
@@ -559,7 +567,7 @@ const ProductDetailPage = ({ product, setPage, onAddToCart, wishlist, onToggleWi
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <button
-        onClick={() => setPage('home')}
+        onClick={() => navigate('/')}
         className="text-blue-500 hover:text-blue-700 mb-4 flex items-center"
       >
         <ArrowLeft className="h-4 w-4 mr-1" />
@@ -679,7 +687,7 @@ const CartItem = ({ item, onRemove, onUpdateQuantity }) => (
   </div>
 );
 
-const CartSummary = ({ cart, setPage }) => {
+const CartSummary = ({ cart, navigate }) => {
   const subtotal = useMemo(() => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [cart]);
@@ -709,7 +717,7 @@ const CartSummary = ({ cart, setPage }) => {
         </div>
       </div>
       <button
-        onClick={() => setPage('checkout')}
+        onClick={() => navigate('/checkout')}
         className="w-full bg-blue-500 text-white px-6 py-3 rounded-md font-semibold text-lg hover:bg-blue-600 transition duration-150 flex items-center justify-center"
       >
         <CreditCard className="h-5 w-5 mr-2" />
@@ -719,7 +727,7 @@ const CartSummary = ({ cart, setPage }) => {
   );
 };
 
-const CartPage = ({ cart, onRemove, onUpdateQuantity, setPage }) => {
+const CartPage = ({ cart, onRemove, onUpdateQuantity, navigate }) => {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Shopping Cart</h1>
@@ -727,7 +735,7 @@ const CartPage = ({ cart, onRemove, onUpdateQuantity, setPage }) => {
         <div className="text-center bg-white p-12 rounded-lg shadow-md">
           <p className="text-xl text-gray-600 mb-4">Your cart is empty.</p>
           <button
-            onClick={() => setPage('home')}
+            onClick={() => navigate('/')}
             className="bg-blue-500 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-600 transition duration-150"
           >
             Start Shopping
@@ -748,7 +756,7 @@ const CartPage = ({ cart, onRemove, onUpdateQuantity, setPage }) => {
               ))}
             </div>
           </div>
-          <CartSummary cart={cart} setPage={setPage} />
+          <CartSummary cart={cart} navigate={navigate} />
         </div>
       )}
     </div>
@@ -965,7 +973,7 @@ const CheckoutOrderSummary = ({ cart, deliveryOption }) => {
   );
 };
 
-const CheckoutPage = ({ cart, onPlaceOrder, user, setPage }) => {
+const CheckoutPage = ({ cart, onPlaceOrder, user, navigate }) => {
   const [step, setStep] = useState(1); // 1: Shipping, 2: Delivery, 3: Payment
   const [shippingData, setShippingData] = useState(user.defaultShipping);
   const [billingData, setBillingData] = useState({
@@ -998,6 +1006,7 @@ const CheckoutPage = ({ cart, onPlaceOrder, user, setPage }) => {
       deliveryMethod: selectedDelivery.name,
     };
     onPlaceOrder(newOrder);
+    navigate('/orders');
   };
   
   useEffect(() => {
@@ -1028,7 +1037,7 @@ const CheckoutPage = ({ cart, onPlaceOrder, user, setPage }) => {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Checkout</h1>
         <p className="text-xl text-gray-600 mb-4">Your cart is empty. Please add items to your cart before checking out.</p>
         <button
-          onClick={() => setPage('home')}
+          onClick={() => navigate('/')}
           className="bg-blue-500 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-600 transition duration-150"
         >
           Start Shopping
@@ -1088,7 +1097,7 @@ const CheckoutPage = ({ cart, onPlaceOrder, user, setPage }) => {
 
 // --- ORDERS PAGE ---
 // ... (OrdersPage components remain unchanged)
-const OrderDetails = ({ order, setPage, setSelectedProduct }) => (
+const OrderDetails = ({ order, navigate, setSelectedProduct }) => (
   <div className="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
     {/* Order Header */}
     <div className="bg-gray-100 p-4 border-b border-gray-200">
@@ -1133,7 +1142,7 @@ const OrderDetails = ({ order, setPage, setSelectedProduct }) => (
             <button
               onClick={() => {
                 setSelectedProduct(item);
-                setPage('productDetail');
+                navigate('/productDetail');
               }}
               className="text-lg font-medium text-blue-600 hover:underline text-left"
             >
@@ -1146,7 +1155,7 @@ const OrderDetails = ({ order, setPage, setSelectedProduct }) => (
             <button
               onClick={() => {
                 setSelectedProduct(item);
-                setPage('productDetail');
+                navigate('/productDetail');
               }}
               className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md font-medium text-sm hover:bg-gray-200 transition duration-150"
             >
@@ -1155,7 +1164,7 @@ const OrderDetails = ({ order, setPage, setSelectedProduct }) => (
             <button
               onClick={() => {
                 setSelectedProduct(item);
-                setPage('productDetail');
+                navigate('/productDetail');
               }}
               className="bg-yellow-400 text-gray-800 px-3 py-2 rounded-md font-medium text-sm hover:bg-yellow-500 transition duration-150"
             >
@@ -1168,14 +1177,14 @@ const OrderDetails = ({ order, setPage, setSelectedProduct }) => (
   </div>
 );
 
-const OrdersPage = ({ orders, setPage, setSelectedProduct }) => (
+const OrdersPage = ({ orders, navigate, setSelectedProduct }) => (
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Orders</h1>
     {orders.length === 0 ? (
       <div className="text-center bg-white p-12 rounded-lg shadow-md">
         <p className="text-xl text-gray-600 mb-4">You have not placed any orders yet.</p>
         <button
-          onClick={() => setPage('home')}
+          onClick={() => navigate('/')}
           className="bg-blue-500 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-600 transition duration-150"
         >
           Start Shopping
@@ -1187,7 +1196,7 @@ const OrdersPage = ({ orders, setPage, setSelectedProduct }) => (
           <OrderDetails
             key={order.id}
             order={order}
-            setPage={setPage}
+            navigate={navigate}
             setSelectedProduct={setSelectedProduct}
           />
         ))}
@@ -1199,7 +1208,7 @@ const OrdersPage = ({ orders, setPage, setSelectedProduct }) => (
 
 // --- WISHLIST PAGE (Rebuilt) ---
 
-const WishlistItem = ({ item, onRemove, onMoveToCart, setPage, setSelectedProduct }) => (
+const WishlistItem = ({ item, onRemove, onMoveToCart, navigate, setSelectedProduct }) => (
   <div className="flex items-center py-4 border-b border-gray-200">
     <img
       src={item.imageUrl}
@@ -1208,14 +1217,14 @@ const WishlistItem = ({ item, onRemove, onMoveToCart, setPage, setSelectedProduc
       onError={(e) => { e.target.src = 'https://placehold.co/100x100/e2e8f0/334155?text=Image+Error'; }}
       onClick={() => {
         setSelectedProduct(item);
-        setPage('productDetail');
+        navigate('/productDetail');
       }}
     />
     <div className="flex-grow">
       <button
         onClick={() => {
           setSelectedProduct(item);
-          setPage('productDetail');
+          navigate('/productDetail');
         }}
         className="text-lg font-semibold text-gray-800 hover:text-blue-600 text-left"
       >
@@ -1243,14 +1252,14 @@ const WishlistItem = ({ item, onRemove, onMoveToCart, setPage, setSelectedProduc
   </div>
 );
 
-const WishlistPage = ({ wishlist, onRemoveFromWishlist, onMoveToCart, setPage, setSelectedProduct }) => (
+const WishlistPage = ({ wishlist, onRemoveFromWishlist, onMoveToCart, navigate, setSelectedProduct }) => (
   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h1 className="text-3xl font-bold text-gray-800 mb-6">Your Wish List</h1>
     {wishlist.length === 0 ? (
       <div className="text-center bg-white p-12 rounded-lg shadow-md">
         <p className="text-xl text-gray-600 mb-4">Your wish list is empty.</p>
         <button
-          onClick={() => setPage('home')}
+          onClick={() => navigate('/')}
           className="bg-blue-500 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-600 transition duration-150"
         >
           Discover Items
@@ -1266,7 +1275,7 @@ const WishlistPage = ({ wishlist, onRemoveFromWishlist, onMoveToCart, setPage, s
               item={item}
               onRemove={onRemoveFromWishlist}
               onMoveToCart={onMoveToCart}
-              setPage={setPage}
+              navigate={navigate}
               setSelectedProduct={setSelectedProduct}
             />
           ))}
@@ -1280,12 +1289,14 @@ const WishlistPage = ({ wishlist, onRemoveFromWishlist, onMoveToCart, setPage, s
 // --- MAIN APP COMPONENT ---
 
 export default function App() {
-  const [page, setPage] = useState('home'); // 'home', 'cart', 'checkout', 'orders', 'productDetail', 'wishlist'
   const [cart, setCart] = useState([]);
   const [wishlist, setWishlist] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [user, setUser] = useState(mockUser);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const cartCount = useMemo(() => {
     return cart.reduce((count, item) => count + item.quantity, 0);
@@ -1322,7 +1333,7 @@ export default function App() {
   const handlePlaceOrder = (newOrder) => {
     setOrders(prevOrders => [newOrder, ...prevOrders]);
     setCart([]);
-    setPage('orders');
+    navigate('/orders');
   };
 
   const handleToggleWishlist = (product) => {
@@ -1346,55 +1357,55 @@ export default function App() {
   };
 
   const renderPage = () => {
-    switch (page) {
-      case 'home':
+    switch (location.pathname) {
+      case '/':
         return <HomePage
           onAddToCart={handleAddToCart}
-          setPage={setPage}
+          navigate={navigate}
           setSelectedProduct={setSelectedProduct}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />;
-      case 'cart':
+      case '/cart':
         return <CartPage 
                  cart={cart} 
                  onRemove={handleRemoveFromCart} 
                  onUpdateQuantity={handleUpdateCartQuantity} 
-                 setPage={setPage} 
+                 navigate={navigate}
                />;
-      case 'checkout':
+      case '/checkout':
         return <CheckoutPage 
                  cart={cart} 
                  onPlaceOrder={handlePlaceOrder} 
                  user={user} 
-                 setPage={setPage} 
+                 navigate={navigate}
                />;
-      case 'orders':
+      case '/orders':
         return <OrdersPage
           orders={orders}
-          setPage={setPage}
+          navigate={navigate}
           setSelectedProduct={setSelectedProduct}
         />;
-      case 'productDetail':
+      case '/productDetail':
         return <ProductDetailPage
           product={selectedProduct}
-          setPage={setPage}
+          navigate={navigate}
           onAddToCart={handleAddToCart}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
         />;
-      case 'wishlist':
+      case '/wishlist':
         return <WishlistPage 
                  wishlist={wishlist}
                  onRemoveFromWishlist={handleRemoveFromWishlist}
                  onMoveToCart={handleMoveToCart}
-                 setPage={setPage}
+                 navigate={navigate}
                  setSelectedProduct={setSelectedProduct}
                />;
       default:
         return <HomePage
           onAddToCart={handleAddToCart}
-          setPage={setPage}
+          navigate={navigate}
           setSelectedProduct={setSelectedProduct}
           wishlist={wishlist}
           onToggleWishlist={handleToggleWishlist}
@@ -1404,7 +1415,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
-      <Header setPage={setPage} cartCount={cartCount} />
+      <Header cartCount={cartCount} />
       <main>
         {renderPage()}
       </main>
