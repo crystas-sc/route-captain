@@ -3,6 +3,60 @@
 // - Uses Tailwind utility classes when available; falls back to minimal CSS
 // - Auto-initializes when this script is loaded in the page <head>
 
+import { tours } from './tours.js';
+
+/**
+ * Normalizes an array of step objects into the format expected by Driver.js.
+ * @param {Array<Object>} steps - Steps from the Gemini result, e.g., { selector, title, description }.
+ * @returns {Array<Object>} Normalized steps for Driver.js, e.g., { element, popover: { title, description } }.
+ */
+function normalizeDriverSteps(steps, getDriverObj) {
+	return steps.map(s => {
+		let step = {
+			// Use 'element' or 'selector' for the DOM target
+			element: s.xpath ? () => getElementByXPath(s.xpath) : s.element || s.selector || null,
+			popover: s.popover || {
+				title: s.title || '',
+				description: s.description || ''
+
+			}
+		};
+		debugger;
+		if (s.nextActions && Array.isArray(s.nextActions)) {
+			step.popover.onNextClick = () => {
+				s.nextActions.forEach(action => {
+					if (action.action === 'click' && action.xpath) {
+						const element = getElementByXPath(action.xpath);
+						if (element) {
+							element.click();
+							setTimeout(() => {
+								getDriverObj().moveNext();
+
+							}, 500)
+						}
+					}
+				});
+
+
+			};
+		}
+
+		return step;
+	});
+}
+
+function getElementByXPath(xpath) {
+	return document.evaluate(
+		xpath,
+		document,
+		null,
+		XPathResult.FIRST_ORDERED_NODE_TYPE,
+		null
+	).singleNodeValue;
+}
+
+
+
 (function () {
 	const STYLE_ID = 'route-captain-chat-styles';
 	const COMPONENT_NAME = 'route-captain-chat';
@@ -36,6 +90,7 @@
 			this._container = null;
 			this._panel = null;
 			this._button = null;
+			this._loading = false;
 		}
 
 		connectedCallback() {
@@ -45,6 +100,7 @@
 
 			this._render();
 			this._attachEvents();
+
 		}
 
 		disconnectedCallback() {
@@ -73,9 +129,17 @@
 						</div>
 					</div>
 					<div class="flex items-center gap-2">
+
 						<button aria-label="Minimize chat" class="rc-minimize text-white/90 hover:text-white">—</button>
 						<button aria-label="Close chat" class="rc-close text-white/90 hover:text-white">×</button>
 					</div>
+				</div>
+
+				<div class="px-4 py-2">
+					<select class="rc-tour-select w-full text-xs rounded-md px-2 py-1 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100">
+							<option value="">Start a Tour</option>
+							${tours.map(tour => `<option value="${tour.name}">${tour.label}</option>`).join('')}
+						</select>
 				</div>
 				<div class="rc-messages p-4 overflow-auto bg-white dark:bg-slate-900 flex-1">
 					<div class="text-xs text-slate-500">This is a demo chat. Integrate your chat provider or API to handle messages.</div>
@@ -115,17 +179,20 @@
 			this._onToggle = this._toggle.bind(this);
 			this._onDocumentKey = this._onDocumentKey.bind(this);
 			this._onSend = this._onSend.bind(this);
+			this._onTourSelect = this._onTourSelect.bind(this);
 
 			this._button.addEventListener('click', this._onToggle);
 			const closeBtn = this._panel.querySelector('.rc-close');
 			const minimizeBtn = this._panel.querySelector('.rc-minimize');
 			const sendBtn = this._panel.querySelector('.rc-send');
 			const input = this._panel.querySelector('.rc-input');
+			const tourSelect = this._panel.querySelector('.rc-tour-select');
 
 			if (closeBtn) closeBtn.addEventListener('click', this._toggle);
 			if (minimizeBtn) minimizeBtn.addEventListener('click', () => this._minimize());
 			if (sendBtn) sendBtn.addEventListener('click', this._onSend);
 			if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._onSend(); });
+			if (tourSelect) tourSelect.addEventListener('change', this._onTourSelect);
 
 			document.addEventListener('keydown', this._onDocumentKey);
 		}
@@ -167,34 +234,99 @@
 		_onSend() {
 			const input = this._panel.querySelector('.rc-input');
 			const messages = this._panel.querySelector('.rc-messages');
-			if (!input || !messages) return;
+			const sendBtn = this._panel.querySelector('.rc-send');
+
+			if (!input || !messages || !sendBtn) return;
 			const text = input.value && input.value.trim();
-			if (!text) return;
+			if (!text || this._loading) return; // Prevent multiple requests
 
-			const bubble = document.createElement('div');
-			bubble.className = 'rc-bubble rc-bubble-user mb-2 text-sm';
-			bubble.textContent = text;
-			bubble.style.background = '#e6f4ff';
-			bubble.style.padding = '8px 10px';
-			bubble.style.borderRadius = '8px';
-			bubble.style.display = 'inline-block';
+			this._loading = true;
+			sendBtn.textContent = 'Sending...';
+			sendBtn.disabled = true;
 
-			messages.appendChild(bubble);
+			// Display user's message
+			const userBubble = document.createElement('div');
+			userBubble.className = 'rc-bubble rc-bubble-user mb-2 text-sm';
+			userBubble.textContent = text;
+			userBubble.style.background = '#e6f4ff';
+			userBubble.style.color = '#333'; // Set text color to dark grey
+			userBubble.style.padding = '8px 10px';
+			userBubble.style.borderRadius = '8px';
+			userBubble.style.display = 'inline-block';
+			messages.appendChild(userBubble);
 			messages.scrollTop = messages.scrollHeight;
 			input.value = '';
 
-			// Placeholder: here you could call an API or integrate a bot
-			setTimeout(() => {
-				const reply = document.createElement('div');
-				reply.className = 'rc-bubble rc-bubble-bot mb-2 text-sm';
-				reply.textContent = 'Thanks for your message — integrate your chat backend to send real responses.';
-				reply.style.background = '#f1f5f9';
-				reply.style.padding = '8px 10px';
-				reply.style.borderRadius = '8px';
-				reply.style.display = 'inline-block';
-				messages.appendChild(reply);
+			// Make POST call to /api/ai
+			fetch('/api/ai', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ prompt: text }),
+			})
+			.then(response => response.json())
+			.then(data => {
+				// Display AI's response
+				const aiBubble = document.createElement('div');
+				aiBubble.className = 'rc-bubble rc-bubble-bot mb-2 text-sm';
+				aiBubble.textContent = JSON.stringify(data, null, 2);
+				aiBubble.style.background = '#f1f5f9';
+				aiBubble.style.color = '#333'; // Set text color to dark grey
+				aiBubble.style.padding = '8px 10px';
+				aiBubble.style.borderRadius = '8px';
+				aiBubble.style.display = 'inline-block';
+				messages.appendChild(aiBubble);
 				messages.scrollTop = messages.scrollHeight;
-			}, 700);
+
+				// Start Driver.js tour with the AI's response
+				if (data) {
+					this._startDriverTour(data);
+				}
+			})
+			.catch(error => {
+				console.error('Error:', error);
+				const errorBubble = document.createElement('div');
+				errorBubble.className = 'rc-bubble rc-bubble-error mb-2 text-sm';
+				errorBubble.textContent = 'Error: ' + error.message;
+				errorBubble.style.background = '#ffe6e6';
+				errorBubble.style.color = '#333'; // Set text color to dark grey
+				errorBubble.style.padding = '8px 10px';
+				errorBubble.style.borderRadius = '8px';
+				errorBubble.style.display = 'inline-block';
+				messages.appendChild(errorBubble);
+				messages.scrollTop = messages.scrollHeight;
+			})
+			.finally(() => {
+				this._loading = false;
+				sendBtn.textContent = 'Send';
+				sendBtn.disabled = false;
+			});
+		}
+
+		_startDriverTour(responseJson) {
+			const driver = window.driver.js.driver;
+			let driverObj; // Declare driverObj here
+
+			// Normalize steps, passing a function that will return the driverObj when called
+			const normalizedSteps = normalizeDriverSteps(responseJson, () => driverObj);
+
+			driverObj = driver({
+				showProgress: true,
+				steps: normalizedSteps
+			});
+			driverObj.drive();
+		}
+
+		_onTourSelect(e) {
+			const tourName = e.target.value;
+			e.target.value = ''; // Reset select box
+			this._closePanel(); // Close chat panel when tour starts
+
+			const selectedTour = tours.find(tour => tour.name === tourName);
+			if (selectedTour) {
+				this._startDriverTour(selectedTour.tour);
+			}
 		}
 	}
 
